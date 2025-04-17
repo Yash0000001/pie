@@ -219,6 +219,6 @@ func main() {
 		fmt.Printf("\n🚀 Keep grinding! You wrote %d lines. Great start! 💻\n", total)
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 	fmt.Println("✅ Done!")
 }
