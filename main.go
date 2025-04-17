@@ -72,7 +72,7 @@ func isCodeFile(filename string) bool {
 
 		// SQL & DB
 		".sql": true,
-		".db":  false, // binary, skip
+		".db":  false,
 
 		// Data & Templates
 		".csv":        true,
@@ -105,7 +105,12 @@ func countLinesInfile(filePath string) (int, error) {
 
 	count := 0
 	for scanner.Scan() {
-		count++
+		input := scanner.Text()
+
+		if input != "" {
+			count++
+		}
+
 	}
 	return count, scanner.Err()
 }
