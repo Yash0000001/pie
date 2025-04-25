@@ -47,7 +47,7 @@ After entering all paths, press Enter with no input to start processing.
 ### Input Examples
 
 - Local directories: `/home/user/projects/myapp`
-- GitHub repositories: `https://github.com/username/repo`
+- GitHub repositories: `https://github.com/yash0000001/repo`
 
 ## Sample Output
 
