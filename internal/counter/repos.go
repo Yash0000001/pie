@@ -6,12 +6,88 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 )
+
+var SYMBOLS = struct {
+	T    string
+	Bar  string
+	L    string
+	Pipe string
+}{
+	T:    "├",
+	Bar:  "─",
+	L:    "└",
+	Pipe: "│",
+}
+
+func printTree(stats []FileStats) (totalLines int) {
+	type Node struct {
+		Children  map[string]*Node
+		IsFile    bool
+		LineCount int
+	}
+
+	root := &Node{Children: make(map[string]*Node)}
+
+	// Step 1: Build the tree with line counts
+	for _, stat := range stats {
+		normalized := strings.ReplaceAll(stat.Path, `\`, `/`)
+		parts := strings.Split(normalized, "/")
+		curr := root
+		for i, part := range parts {
+			if curr.Children[part] == nil {
+				curr.Children[part] = &Node{Children: make(map[string]*Node)}
+			}
+			curr = curr.Children[part]
+			if i == len(parts)-1 {
+				curr.IsFile = true
+				curr.LineCount = stat.LineCount
+			}
+		}
+	}
+
+	// Step 2: Recursive print
+	var walk func(node *Node, prefix string, isLast bool)
+	walk = func(node *Node, prefix string, isLast bool) {
+		keys := make([]string, 0, len(node.Children))
+		for k := range node.Children {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for i, k := range keys {
+			child := node.Children[k]
+			isLastChild := i == len(keys)-1
+			connector := SYMBOLS.T
+			nextPrefix := prefix + SYMBOLS.Pipe + "   "
+
+			if isLastChild {
+				connector = SYMBOLS.L
+				nextPrefix = prefix + "    "
+			}
+
+			if child.IsFile {
+				color.Cyan("%s%s%s %s (%d lines)", prefix, connector, SYMBOLS.Bar+SYMBOLS.Bar, k, child.LineCount)
+				totalLines += child.LineCount
+			} else {
+				color.Yellow("%s%s%s %s", prefix, connector, SYMBOLS.Bar+SYMBOLS.Bar, k)
+			}
+
+			walk(child, nextPrefix, isLastChild)
+		}
+
+	}
+
+	color.Green(".")
+	walk(root, "", true)
+	return totalLines
+}
 
 func countLinesInRoot(root string) ([]FileStats, error) {
 	var stats []FileStats
@@ -31,7 +107,6 @@ func countLinesInRoot(root string) ([]FileStats, error) {
 				color.Red("Error reading file %s: %v\n", path, err)
 				return nil
 			}
-
 			stats = append(stats, FileStats{LineCount: lines, Path: path})
 
 		}
@@ -71,6 +146,7 @@ func ProcessPath(root string) (int, error) {
 	var flag bool
 	if strings.Contains(root, "github.com") {
 		flag = true
+		root = root + ".git"
 		color.Red("Yeah so it is a github url")
 	}
 
@@ -99,12 +175,7 @@ func ProcessPath(root string) (int, error) {
 
 	s.Stop()
 
-	total := 0
-	for _, file := range stats {
-		resultPath := strings.Replace(file.Path, "temp-dir", "", -1)
-		color.HiYellow("total Lines on %s: %d \n", resultPath, file.LineCount)
-		total += file.LineCount
-	}
+	total := printTree(stats)
 
 	if total > 1000 {
 		fmt.Printf("\n🎉 Well done! You wrote %d lines of code. Go get a chai! ☕\n", total)

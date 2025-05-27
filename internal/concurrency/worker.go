@@ -8,7 +8,6 @@ import (
 )
 
 func ProcessPaths(rootArr []string) int {
-	// fmt.Scan(&root) //taking input here
 	var wg sync.WaitGroup
 	results := make(chan int)
 
